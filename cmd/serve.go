@@ -1,28 +1,34 @@
 package cmd
 
 import (
+	"context"
 	"fmt"
 	"github.com/1token/email-services/pkg/config"
-	"github.com/spf13/viper"
-	"os"
-
+	"github.com/1token/email-services/pkg/session"
+	grpcmiddleware "github.com/grpc-ecosystem/go-grpc-middleware"
+	grpcrecovery "github.com/grpc-ecosystem/go-grpc-middleware/recovery"
+	"github.com/improbable-eng/grpc-web/go/grpcweb"
+	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/credentials"
+	"google.golang.org/grpc/status"
+	"net/http"
+	"os"
+	"strings"
 )
 
 // serveCmd represents the serve command
 var serveCmd = &cobra.Command{
-	Use:   "serve --config [ config file ]",
-	Short: "A brief description of your command",
-	Long: `A longer description that spans multiple lines and likely contains examples
-and usage of using your command. For example:
-
-Cobra is a CLI library for Go that empowers applications.
-This application is a tool to generate the needed files
-to quickly create a Cobra application.`,
+	Use:     "serve --config [ config file ]",
+	Short:   "Start serving requests.",
+	Long:    ``,
 	Example: "email-services serve --config examples/config-dev.yaml",
 	Run: func(cmd *cobra.Command, args []string) {
-		if err := serve(cmd, args); err != nil {
-			fmt.Fprintln(os.Stderr, err)
+		if err := serve(); err != nil {
+			_, _ = fmt.Fprintln(os.Stderr, err)
 			os.Exit(2)
 		}
 	},
@@ -30,21 +36,9 @@ to quickly create a Cobra application.`,
 
 func init() {
 	rootCmd.AddCommand(serveCmd)
-
-	// Here you will define your flags and configuration settings.
-
-	// Cobra supports Persistent Flags which will work for this command
-	// and all subcommands, e.g.:
-	// serveCmd.PersistentFlags().String("foo", "", "A help for foo")
-
-	// Cobra supports local flags which will only run when this command
-	// is called directly, e.g.:
-	// serveCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
 }
 
-func serve(cmd *cobra.Command, args []string) error {
-	errc := make(chan error, 3)
-
+func serve() error {
 	// unmarshal config into Struct
 	var c config.Config
 	err := viper.Unmarshal(&c)
@@ -52,7 +46,136 @@ func serve(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("unmarshal failed: %v", err)
 	}
 
-	// fmt.Printf("Web: %s\n", c.Web.HTTP)
+	if err := c.Validate(); err != nil {
+		return err
+	}
+
+	var (
+		grpcServer    *grpc.Server
+		wrappedServer *grpcweb.WrappedGrpcServer
+	)
+
+	if c.Web.TLSCert != "" {
+		creds, err := credentials.NewServerTLSFromFile(c.Web.TLSCert, c.Web.TLSKey)
+		if err != nil {
+			log.Fatalf("Failed while obtaining TLS certificates. Error: %+v", err)
+		}
+
+		opts := []grpcrecovery.Option{
+			grpcrecovery.WithRecoveryHandler(GrpcRecoveryHandlerFunc),
+		}
+
+		grpcServer = grpc.NewServer(
+			grpc.Creds(creds),
+			grpc.StreamInterceptor(grpcmiddleware.ChainStreamServer(
+				StreamAuthInterceptor,
+				grpcrecovery.StreamServerInterceptor(opts...),
+			)),
+			grpc.UnaryInterceptor(grpcmiddleware.ChainUnaryServer(
+				UnaryAuthInterceptor,
+				grpcrecovery.UnaryServerInterceptor(opts...),
+			)),
+		)
+	}
+
+	// pb.RegisterAuthServer(grpcServer, &oidc.UserInfoImpl{})
+	// pb.RegisterUsersServer(grpcServer, &impl.UserServerImpl{db})
+	// pb.RegisterJmsApiServer(grpcServer, &impl.JmapServerImpl{db})
+	// pb.RegisterGmailServer(grpcServer, &impl.GmailServerImpl{db})
+	// pb.RegisterGmailServer(grpcServer, &impl.LabelsServerImpl{db})
+	// pb.RegisterFilesServer(grpcServer, &impl.FileServerImpl{db})
+
+	wrappedServer = grpcweb.WrapServer(grpcServer,
+		grpcweb.WithOriginFunc(func(origin string) bool {
+			for _, allowedOrigin := range c.Web.AllowedOrigins {
+				if allowedOrigin == "*" || origin == allowedOrigin {
+					return true
+				}
+			}
+			return false
+		}),
+	)
+
+	mux := http.NewServeMux()
+
+	httpServer := http.Server{
+		Addr: c.Web.Addr(),
+		Handler: http.HandlerFunc(
+			func(resp http.ResponseWriter, req *http.Request) {
+				if req.Method == http.MethodOptions {
+					for _, allowedOrigin := range c.Web.AllowedOrigins {
+						if allowedOrigin == "*" || allowedOrigin == req.Header.Get("Origin") {
+							SetCors(resp, allowedOrigin)
+							return
+						}
+					}
+					return
+				}
+
+				if IsGrpcRequest(req) {
+					if wrappedServer.IsGrpcWebRequest(req) {
+						wrappedServer.ServeHTTP(resp, req)
+					} else {
+						grpcServer.ServeHTTP(resp, req)
+					}
+				} else {
+					mux.ServeHTTP(resp, req)
+				}
+			},
+		),
+	}
+
+	// mux.HandleFunc(common.AUTH_SIGNIN_PATH, oidc.SignIn())
+	// mux.HandleFunc(common.AUTH_SIGNOUT_PATH, oidc.SignOut())
+	// mux.HandleFunc(common.AUTH_REDIRECT_PATH, oidc.HandleCallback())
+	// mux.HandleFunc(common.FILES_PATH, impl.HandleFiles())
+
+	// make a channel for each server to fail properly
+	errc := make(chan error, 1)
+
+	go func() {
+		errc <- httpServer.ListenAndServeTLS(c.Web.TLSCert, c.Web.TLSKey)
+		close(errc)
+	}()
 
 	return <-errc
+}
+
+func SetCors(w http.ResponseWriter, allowedOrigin string) {
+	w.Header().Set("Access-Control-Allow-Origin", allowedOrigin)
+	w.Header().Set("Access-Control-Allow-Methods", "*")
+	w.Header().Set("Access-Control-Allow-Credentials", "true")
+	w.Header().Set("Access-Control-Allow-Headers", "Content-Type, x-grpc-web, sessionid, x-user-agent, authorization-token")
+	w.Header().Set("Access-Control-Max-Age", "600")
+}
+
+func IsGrpcRequest(req *http.Request) bool {
+	return strings.Contains(req.Header.Get("Content-Type"), "application/grpc")
+}
+
+func GrpcRecoveryHandlerFunc(p interface{}) error {
+	fmt.Printf("p: %+v\n", p)
+	return status.Errorf(codes.Internal, "Unexpected error")
+}
+
+func StreamAuthInterceptor(srv interface{}, stream grpc.ServerStream, info *grpc.StreamServerInfo, handler grpc.StreamHandler) (err error) {
+	ctx, err := session.Auth(stream.Context())
+	if err != nil {
+		log.Errorf("%s %v", info.FullMethod, err)
+		return err
+	}
+
+	wrapped := grpcmiddleware.WrapServerStream(stream)
+	wrapped.WrappedContext = ctx
+	return handler(srv, wrapped)
+}
+
+func UnaryAuthInterceptor(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (interface{}, error) {
+	ctx, err := session.Auth(ctx)
+	if err != nil {
+		log.Errorf("%s %v", info.FullMethod, err)
+		return nil, err
+	}
+
+	return handler(ctx, req)
 }

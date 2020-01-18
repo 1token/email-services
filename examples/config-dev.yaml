@@ -1,9 +1,10 @@
-# Configuration for the HTTP endpoints.
-name: "igi64"
-
+# Configuration for the HTTP(S) endpoints.
 web:
-  http: foo.org:6666
-  # Uncomment for HTTPS options.
-  # https: 127.0.0.1:6664
-  # tlsCert: /etc/email-services/tls.crt
-  # tlsKey: /etc/email-services/tls.key
+  protocol: https
+  host: foo.org
+  port: 6664
+  allowedOrigins:
+    - 'https://foo.org:6664'
+    - 'http://localhost:33143'
+  tlsCert: certs/foo.org/cert.pem
+  tlsKey: certs/foo.org/key.pem

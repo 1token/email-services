@@ -17,9 +17,10 @@ func (c Config) Validate() error {
 		bad    bool
 		errMsg string
 	}{
-		{c.Web.HTTP == "" && c.Web.HTTPS == "", "must supply a HTTP/HTTPS  address to listen on"},
-		{c.Web.HTTPS != "" && c.Web.TLSCert == "", "no cert specified for HTTPS"},
-		{c.Web.HTTPS != "" && c.Web.TLSKey == "", "no private key specified for HTTPS"},
+		{c.Web.Protocol != "http" && c.Web.Protocol != "https", "must supply 'http' or 'https' Protocol"},
+		{c.Web.Host == "", "must supply a Host to listen on"},
+		{c.Web.Protocol == "https" && (c.Web.TLSCert == "" || c.Web.TLSKey == ""), "must specific both a TLS cert and key"},
+		{len(c.Web.AllowedOrigins) == 0, "must specify at least one Allowed Origin"},
 	}
 
 	var checkErrors []string
@@ -37,9 +38,18 @@ func (c Config) Validate() error {
 
 // Web is the config format for the HTTP server.
 type Web struct {
-	HTTP           string   `json:"http"`
-	HTTPS          string   `json:"https"`
+	Protocol       string   `json:"protocol"`
+	Host           string   `json:"host"`
+	Port           string   `json:"port"`
 	TLSCert        string   `json:"tlsCert"`
 	TLSKey         string   `json:"tlsKey"`
 	AllowedOrigins []string `json:"allowedOrigins"`
+}
+
+func (w Web) Addr() string {
+	addr := w.Host
+	if w.Port != "" {
+		addr += ":" + w.Port
+	}
+	return addr
 }
