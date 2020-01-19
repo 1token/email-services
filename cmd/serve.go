@@ -17,6 +17,8 @@ import (
 	"net/http"
 	"os"
 	"strings"
+
+	pb "github.com/1token/email-services/email-apis/generated/go"
 )
 
 // serveCmd represents the serve command
@@ -79,6 +81,7 @@ func serve() error {
 		)
 	}
 
+	pb.RegisterDraftServiceServer(grpcServer, &pb.DraftServiceServer{})
 	// pb.RegisterAuthServer(grpcServer, &oidc.UserInfoImpl{})
 	// pb.RegisterUsersServer(grpcServer, &impl.UserServerImpl{db})
 	// pb.RegisterJmsApiServer(grpcServer, &impl.JmapServerImpl{db})
