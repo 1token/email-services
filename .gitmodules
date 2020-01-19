@@ -1,0 +1,3 @@
+[submodule "email-apis"]
+	path = email-apis
+	url = https://github.com/1token/email-apis.git
