@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/1token/email-services/pkg/config"
 	"github.com/1token/email-services/repository"
+	impl "github.com/1token/email-services/services"
 	"github.com/1token/email-services/session"
 	grpcmiddleware "github.com/grpc-ecosystem/go-grpc-middleware"
 	grpcrecovery "github.com/grpc-ecosystem/go-grpc-middleware/recovery"
@@ -81,7 +82,7 @@ func serve() error {
 		)
 	}
 
-	pb.RegisterDraftServiceServer(grpcServer, &pb.DraftServiceServer{})
+	pb.RegisterDraftServiceServer(grpcServer, &impl.DraftServerImpl{nil})
 	// pb.RegisterAuthServer(grpcServer, &oidc.UserInfoImpl{})
 	// pb.RegisterUsersServer(grpcServer, &impl.UserServerImpl{db})
 	// pb.RegisterJmsApiServer(grpcServer, &impl.JmapServerImpl{db})

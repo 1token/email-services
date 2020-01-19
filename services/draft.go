@@ -1,7 +1,8 @@
 package service
 
 import (
-	// "context"
+	"context"
+	"github.com/golang/protobuf/ptypes/empty"
 
 	// "github.com/gogo/protobuf/types"
 	"database/sql"
@@ -10,24 +11,38 @@ import (
 )
 
 const (
-	userTable = "users"
+	draftTable = "draft"
 )
 
 type DraftServerImpl struct {
 	DB *sql.DB
 }
 
-func (s *DraftServerImpl) List(in *pb.Draft, stream pb.ListDraftsRequest) error {
-	/*users := []*pb.User{}
-	if err := biz.List(s.DB, userTable, &users, "order by data->'$.created' desc"); err != nil {
-		return err
-	}
+func (s *DraftServerImpl) GetDraft(ctx context.Context, in *pb.GetDraftRequest) (*pb.Draft, error) {
+	draft := &pb.Draft{}
+	return draft, nil
+}
 
-	for _, v := range users {
-		if err := stream.Send(v); err != nil {
-			return err
-		}
-	}*/
+func (s *DraftServerImpl) ListDrafts(ctx context.Context, in *pb.ListDraftsRequest) (*pb.ListDraftsResponse, error) {
+	drafts := &pb.ListDraftsResponse{}
+	return drafts, nil
+}
 
-	return nil
+func (s *DraftServerImpl) CreateDraft(ctx context.Context, in *pb.CreateDraftRequest) (*pb.Draft, error) {
+	draft := &pb.Draft{}
+	return draft, nil
+}
+
+func (s *DraftServerImpl) UpdateDraft(ctx context.Context, in *pb.UpdateDraftRequest) (*pb.Draft, error) {
+	draft := &pb.Draft{}
+	return draft, nil
+}
+
+func (s *DraftServerImpl) DeleteDraft(ctx context.Context, in *pb.DeleteDraftRequest) (*empty.Empty, error) {
+	return nil, nil
+}
+
+func (s *DraftServerImpl) SendDraft(ctx context.Context, in *pb.SendDraftRequest) (*pb.Email, error) {
+	email := &pb.Email{}
+	return email, nil
 }
