@@ -4,7 +4,8 @@ import (
 	"context"
 	"fmt"
 	"github.com/1token/email-services/pkg/config"
-	"github.com/1token/email-services/pkg/session"
+	"github.com/1token/email-services/repository"
+	"github.com/1token/email-services/session"
 	grpcmiddleware "github.com/grpc-ecosystem/go-grpc-middleware"
 	grpcrecovery "github.com/grpc-ecosystem/go-grpc-middleware/recovery"
 	"github.com/improbable-eng/grpc-web/go/grpcweb"
@@ -12,9 +13,7 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	"google.golang.org/grpc"
-	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/credentials"
-	"google.golang.org/grpc/status"
 	"net/http"
 	"os"
 	"strings"
@@ -61,19 +60,21 @@ func serve() error {
 			log.Fatalf("Failed while obtaining TLS certificates. Error: %+v", err)
 		}
 
-		opts := []grpcrecovery.Option{
+		/*opts := []grpcrecovery.Option{
 			grpcrecovery.WithRecoveryHandler(GrpcRecoveryHandlerFunc),
-		}
+		}*/
 
 		grpcServer = grpc.NewServer(
 			grpc.Creds(creds),
 			grpc.StreamInterceptor(grpcmiddleware.ChainStreamServer(
 				StreamAuthInterceptor,
-				grpcrecovery.StreamServerInterceptor(opts...),
+				// grpcrecovery.StreamServerInterceptor(opts...),
+				grpcrecovery.StreamServerInterceptor(),
 			)),
 			grpc.UnaryInterceptor(grpcmiddleware.ChainUnaryServer(
 				UnaryAuthInterceptor,
-				grpcrecovery.UnaryServerInterceptor(opts...),
+				// grpcrecovery.UnaryServerInterceptor(opts...),
+				grpcrecovery.UnaryServerInterceptor(),
 			)),
 		)
 	}
@@ -96,7 +97,7 @@ func serve() error {
 		}),
 	)
 
-	mux := http.NewServeMux()
+	restMux := http.NewServeMux() // http.DefaultServeMux
 
 	httpServer := http.Server{
 		Addr: c.Web.Addr(),
@@ -119,16 +120,16 @@ func serve() error {
 						grpcServer.ServeHTTP(resp, req)
 					}
 				} else {
-					mux.ServeHTTP(resp, req)
+					restMux.ServeHTTP(resp, req)
 				}
 			},
 		),
 	}
 
-	// mux.HandleFunc(common.AUTH_SIGNIN_PATH, oidc.SignIn())
-	// mux.HandleFunc(common.AUTH_SIGNOUT_PATH, oidc.SignOut())
-	// mux.HandleFunc(common.AUTH_REDIRECT_PATH, oidc.HandleCallback())
-	// mux.HandleFunc(common.FILES_PATH, impl.HandleFiles())
+	// restMux.HandleFunc(common.AUTH_SIGNIN_PATH, oidc.SignIn())
+	// restMux.HandleFunc(common.AUTH_SIGNOUT_PATH, oidc.SignOut())
+	// restMux.HandleFunc(common.AUTH_REDIRECT_PATH, oidc.HandleCallback())
+	restMux.HandleFunc(c.File.UploadApi, session.AuthorizeRest(repository.FileUploadHandler))
 
 	// make a channel for each server to fail properly
 	errc := make(chan error, 1)
@@ -153,13 +154,13 @@ func IsGrpcRequest(req *http.Request) bool {
 	return strings.Contains(req.Header.Get("Content-Type"), "application/grpc")
 }
 
-func GrpcRecoveryHandlerFunc(p interface{}) error {
+/*func GrpcRecoveryHandlerFunc(p interface{}) error {
 	fmt.Printf("p: %+v\n", p)
 	return status.Errorf(codes.Internal, "Unexpected error")
-}
+}*/
 
 func StreamAuthInterceptor(srv interface{}, stream grpc.ServerStream, info *grpc.StreamServerInfo, handler grpc.StreamHandler) (err error) {
-	ctx, err := session.Auth(stream.Context())
+	ctx, err := session.AuthorizeGrpc(stream.Context())
 	if err != nil {
 		log.Errorf("%s %v", info.FullMethod, err)
 		return err
@@ -171,7 +172,7 @@ func StreamAuthInterceptor(srv interface{}, stream grpc.ServerStream, info *grpc
 }
 
 func UnaryAuthInterceptor(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (interface{}, error) {
-	ctx, err := session.Auth(ctx)
+	ctx, err := session.AuthorizeGrpc(ctx)
 	if err != nil {
 		log.Errorf("%s %v", info.FullMethod, err)
 		return nil, err

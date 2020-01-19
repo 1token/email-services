@@ -7,7 +7,8 @@ import (
 
 // Config is the config format for the main application.
 type Config struct {
-	Web Web `json:"web"`
+	Web  Web  `json:"web"`
+	File File `json:"file"`
 }
 
 //Validate the configuration
@@ -21,6 +22,8 @@ func (c Config) Validate() error {
 		{c.Web.Host == "", "must supply a Host to listen on"},
 		{c.Web.Protocol == "https" && (c.Web.TLSCert == "" || c.Web.TLSKey == ""), "must specific both a TLS cert and key"},
 		{len(c.Web.AllowedOrigins) == 0, "must specify at least one Allowed Origin"},
+
+		{c.File.UploadApi == "", "must supply a File Upload API to upload files to the storage"},
 	}
 
 	var checkErrors []string
@@ -52,4 +55,8 @@ func (w Web) Addr() string {
 		addr += ":" + w.Port
 	}
 	return addr
+}
+
+type File struct {
+	UploadApi string `json:uploadApi`
 }

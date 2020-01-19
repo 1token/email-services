@@ -8,3 +8,7 @@ web:
     - 'http://localhost:33143'
   tlsCert: certs/foo.org/cert.pem
   tlsKey: certs/foo.org/key.pem
+
+file:
+  uploadApi: /api/file/upload
+  folder: filerepository
