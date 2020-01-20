@@ -15,6 +15,8 @@ import (
 	"github.com/spf13/viper"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
+	"gopkg.in/yaml.v2"
+	"io/ioutil"
 	"net/http"
 	"os"
 	"strings"
@@ -40,10 +42,76 @@ func init() {
 	rootCmd.AddCommand(serveCmd)
 }
 
+/*func jsonStringToMap(f reflect.Kind, t reflect.Kind, data interface{}) (interface{}, error) {
+	if f != reflect.String || t != reflect.Map {
+		return data, nil
+	}
+	raw := data.(string)
+	if raw == "" {
+		return nil, nil
+	}
+	var ret map[string]string
+	err := json.Unmarshal([]byte(raw), &ret)
+	if err != nil {
+		log.Printf("ignored error trying to parse %q as json: %v", raw, err)
+		return data, nil
+	}
+	return ret, nil
+}*/
+
+/*func floatToDecimal() mapstructure.DecodeHookFunc {
+	return func(
+		f reflect.Type,
+		t reflect.Type,
+		data interface{}) (interface{}, error) {
+		if f.Kind() != reflect.Float64 {
+			return data, nil
+		}
+		if t != reflect.TypeOf(decimal.Decimal{}) {
+			return data, nil
+		}
+
+		// Convert it by parsing
+		// dc := decimal.NewFromFloat(data.(float64))
+
+		return nil, nil
+	}
+}
+
+func decodeHookWithTag(hook mapstructure.DecodeHookFunc, tagName string) viper.DecoderConfigOption {
+	return func(c *mapstructure.DecoderConfig) {
+		c.DecodeHook = hook
+		c.TagName = tagName
+	}
+}*/
+
 func serve() error {
 	// unmarshal config into Struct
 	var c config.Config
-	err := viper.Unmarshal(&c)
+
+	/*decodeHook := mapstructure.ComposeDecodeHookFunc(
+		mapstructure.StringToTimeDurationHookFunc(),
+		mapstructure.StringToSliceHookFunc(","),
+		jsonStringToMap,
+	)
+
+	err := viper.Unmarshal(&c, viper.DecodeHook(decodeHook), func(dc *mapstructure.DecoderConfig) {
+		dc.TagName = "json"
+	})*/
+
+	/*decodeHookFunc := floatToDecimal()
+	decoderConfigOption := decodeHookWithTag(decodeHookFunc, "json")
+
+	err := viper.Unmarshal(&c, decoderConfigOption)*/
+
+	configFile := viper.ConfigFileUsed()
+	configData, err := ioutil.ReadFile(configFile)
+	if err != nil {
+		return fmt.Errorf("failed to read config file %s: %v", configFile, err)
+	}
+
+	err = yaml.Unmarshal(configData, &c)
+	// err := viper.Unmarshal(&c)
 	if err != nil {
 		return fmt.Errorf("unmarshal failed: %v", err)
 	}
@@ -56,6 +124,14 @@ func serve() error {
 		grpcServer    *grpc.Server
 		wrappedServer *grpcweb.WrappedGrpcServer
 	)
+
+	db, err := c.Database.Config.Open()
+	defer db.Close()
+
+	if err != nil {
+		return fmt.Errorf("failed to initialize database: %v", err)
+	}
+	log.Infof("config database: %s", c.Database.Type)
 
 	if c.Web.TLSCert != "" {
 		creds, err := credentials.NewServerTLSFromFile(c.Web.TLSCert, c.Web.TLSKey)

@@ -2,13 +2,17 @@ package config
 
 import (
 	"fmt"
+	"github.com/1token/email-services/database"
+	"github.com/1token/email-services/database/sql"
+	"reflect"
 	"strings"
 )
 
 // Config is the config format for the main application.
 type Config struct {
-	Web  Web  `json:"web"`
-	File File `json:"file"`
+	Web      Web      `yaml:"web"`
+	Database Database `yaml:"database"`
+	File     File     `yaml:"file"`
 }
 
 //Validate the configuration
@@ -18,6 +22,7 @@ func (c Config) Validate() error {
 		bad    bool
 		errMsg string
 	}{
+		{c.Database.Config == nil, "no storage supplied in config file"},
 		{c.Web.Protocol != "http" && c.Web.Protocol != "https", "must supply 'http' or 'https' Protocol"},
 		{c.Web.Host == "", "must supply a Host to listen on"},
 		{c.Web.Protocol == "https" && (c.Web.TLSCert == "" || c.Web.TLSKey == ""), "must specific both a TLS cert and key"},
@@ -41,12 +46,12 @@ func (c Config) Validate() error {
 
 // Web is the config format for the HTTP server.
 type Web struct {
-	Protocol       string   `json:"protocol"`
-	Host           string   `json:"host"`
-	Port           string   `json:"port"`
-	TLSCert        string   `json:"tlsCert"`
-	TLSKey         string   `json:"tlsKey"`
-	AllowedOrigins []string `json:"allowedOrigins"`
+	Protocol       string   `yaml:"protocol"`
+	Host           string   `yaml:"host"`
+	Port           string   `yaml:"port"`
+	TLSCert        string   `yaml:"tlsCert"`
+	TLSKey         string   `yaml:"tlsKey"`
+	AllowedOrigins []string `yaml:"allowedOrigins"`
 }
 
 func (w Web) Addr() string {
@@ -57,6 +62,49 @@ func (w Web) Addr() string {
 	return addr
 }
 
+type Database struct {
+	Type   string         `yaml:"type"`
+	Config DatabaseConfig `yaml:"config"`
+}
+
+type DatabaseConfig interface {
+	Open() (database.DatabaseX, error)
+}
+
+var databases = map[string]func() DatabaseConfig{
+	"sqlite3": func() DatabaseConfig { return new(sql.SQLite3) },
+	// "postgres":   func() DatabaseConfig { return new(db.Postgres) },
+	// "mysql":      func() DatabaseConfig { return new(db.MySQL) },
+}
+
+func (s *Database) UnmarshalYAML(unmarshal func(interface{}) error) error {
+	var storeType struct {
+		Type string `yaml:"type"`
+	}
+
+	if err := unmarshal(&storeType); err != nil {
+		return fmt.Errorf("parse storage: %v", err)
+	}
+
+	s.Type = storeType.Type
+
+	var storeDataConfig struct {
+		Config map[string]string
+	}
+
+	if err := unmarshal(&storeDataConfig); err != nil {
+		return fmt.Errorf("parse storage: %v", err)
+	}
+
+	t := reflect.TypeOf(sql.SQLite3{})
+	for i := 0; i < t.NumField(); i++ {
+		s.Config = &sql.SQLite3{storeDataConfig.Config[t.Field(i).Tag.Get("yaml")]}
+	}
+
+	return nil
+}
+
 type File struct {
-	UploadApi string `json:uploadApi`
+	UploadApi string `yaml:"uploadApi"`
+	Folder    string `yaml:"folder"`
 }

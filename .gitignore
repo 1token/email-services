@@ -11,8 +11,14 @@
 # Certificates
 certs
 
+# Binary files
+bin
+
+# Database files
+db
+
 # Temporary files
-temp
+tmp
 
 # Test binary, built with `go test -c`
 *.test

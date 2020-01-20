@@ -9,6 +9,18 @@ web:
   tlsCert: certs/foo.org/cert.pem
   tlsKey: certs/foo.org/key.pem
 
+database:
+  type: sqlite3
+  config:
+    file: ../db/foo.db
+
+#database:
+#  type: postgres
+#  config:
+#    database: email
+#    user: admin
+#    password: admin
+
 file:
   uploadApi: /api/file/upload
-  folder: filerepository
+  folder: filerepo
