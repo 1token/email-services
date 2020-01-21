@@ -17,6 +17,9 @@ bin
 # Database files
 db
 
+# File repository
+tmp
+
 # Temporary files
 tmp
 

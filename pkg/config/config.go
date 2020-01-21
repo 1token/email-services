@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"github.com/1token/email-services/database"
 	"github.com/1token/email-services/database/sql"
-	"reflect"
 	"strings"
 )
 
@@ -22,7 +21,7 @@ func (c Config) Validate() error {
 		bad    bool
 		errMsg string
 	}{
-		{c.Database.Config == nil, "no storage supplied in config file"},
+		{c.Database.Config == nil, "no database supplied in config file"},
 		{c.Web.Protocol != "http" && c.Web.Protocol != "https", "must supply 'http' or 'https' Protocol"},
 		{c.Web.Host == "", "must supply a Host to listen on"},
 		{c.Web.Protocol == "https" && (c.Web.TLSCert == "" || c.Web.TLSKey == ""), "must specific both a TLS cert and key"},
@@ -72,33 +71,52 @@ type DatabaseConfig interface {
 }
 
 var databases = map[string]func() DatabaseConfig{
-	"sqlite3": func() DatabaseConfig { return new(sql.SQLite3) },
-	// "postgres":   func() DatabaseConfig { return new(db.Postgres) },
-	// "mysql":      func() DatabaseConfig { return new(db.MySQL) },
+	"sqlite3":  func() DatabaseConfig { return &sql.SQLite3{} },
+	"postgres": func() DatabaseConfig { return &sql.Postgres{} },
+	"mysql":    func() DatabaseConfig { return &sql.MySQL{} },
 }
 
 func (s *Database) UnmarshalYAML(unmarshal func(interface{}) error) error {
-	var storeType struct {
+	var dbType struct {
 		Type string `yaml:"type"`
 	}
 
-	if err := unmarshal(&storeType); err != nil {
-		return fmt.Errorf("parse storage: %v", err)
+	if err := unmarshal(&dbType); err != nil {
+		return fmt.Errorf("parse database: %v", err)
 	}
 
-	s.Type = storeType.Type
+	s.Type = dbType.Type
 
-	var storeDataConfig struct {
-		Config map[string]string
-	}
+	switch s.Type {
+	case "sqlite3":
+		var dbConfig struct {
+			Config sql.SQLite3 `yaml:"config"`
+		}
 
-	if err := unmarshal(&storeDataConfig); err != nil {
-		return fmt.Errorf("parse storage: %v", err)
-	}
+		if err := unmarshal(&dbConfig); err != nil {
+			return fmt.Errorf("parse database: %v", err)
+		}
+		s.Config = &dbConfig.Config
+	case "postgres":
+		var dbConfig struct {
+			Config sql.Postgres `yaml:"config"`
+		}
 
-	t := reflect.TypeOf(sql.SQLite3{})
-	for i := 0; i < t.NumField(); i++ {
-		s.Config = &sql.SQLite3{storeDataConfig.Config[t.Field(i).Tag.Get("yaml")]}
+		if err := unmarshal(&dbConfig); err != nil {
+			return fmt.Errorf("parse database: %v", err)
+		}
+		s.Config = &dbConfig.Config
+	case "mysql":
+		var dbConfig struct {
+			Config sql.MySQL `yaml:"config"`
+		}
+
+		if err := unmarshal(&dbConfig); err != nil {
+			return fmt.Errorf("parse database: %v", err)
+		}
+		s.Config = &dbConfig.Config
+	default:
+		return fmt.Errorf("unknown connector type %q", s.Type)
 	}
 
 	return nil

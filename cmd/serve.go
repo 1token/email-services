@@ -3,6 +3,7 @@ package cmd
 import (
 	"context"
 	"fmt"
+	pb "github.com/1token/email-services/email-apis/generated/go"
 	"github.com/1token/email-services/pkg/config"
 	"github.com/1token/email-services/repository"
 	impl "github.com/1token/email-services/services"
@@ -19,9 +20,9 @@ import (
 	"io/ioutil"
 	"net/http"
 	"os"
+	"os/signal"
 	"strings"
-
-	pb "github.com/1token/email-services/email-apis/generated/go"
+	"syscall"
 )
 
 // serveCmd represents the serve command
@@ -104,6 +105,17 @@ func serve() error {
 
 	err := viper.Unmarshal(&c, decoderConfigOption)*/
 
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	go func() {
+		sigc := make(chan os.Signal, 1)
+		signal.Notify(sigc, os.Interrupt, syscall.SIGINT, syscall.SIGTERM)
+		<-sigc
+		signal.Stop(sigc)
+		cancel()
+	}()
+
 	configFile := viper.ConfigFileUsed()
 	configData, err := ioutil.ReadFile(configFile)
 	if err != nil {
@@ -126,7 +138,9 @@ func serve() error {
 	)
 
 	db, err := c.Database.Config.Open()
-	defer db.Close()
+	if db != nil {
+		defer db.Close()
+	}
 
 	if err != nil {
 		return fmt.Errorf("failed to initialize database: %v", err)
@@ -219,7 +233,12 @@ func serve() error {
 		close(errc)
 	}()
 
-	return <-errc
+	select {
+	case err := <-errc:
+		return err
+	case <-ctx.Done():
+		return err
+	}
 }
 
 func SetCors(w http.ResponseWriter, allowedOrigin string) {
