@@ -2,6 +2,7 @@ package sql
 
 import (
 	"context"
+	"github.com/1token/email-services/database/sql/postgres"
 	"github.com/golang/protobuf/ptypes/empty"
 	// "github.com/gogo/protobuf/types"
 	// "database/sql"
@@ -48,7 +49,9 @@ func (s *DraftServerImpl) GetDraft(ctx context.Context, in *pb.GetDraftRequest) 
 
 func (s *DraftServerImpl) ListDrafts(ctx context.Context, in *pb.ListDraftsRequest) (*pb.ListDraftsResponse, error) {
 	drafts := &pb.ListDraftsResponse{}
-	// DB.
+	if err := postgres.List(s.DB, "draft", &drafts, "order by data->'$.created' desc"); err != nil {
+		return nil, err
+	}
 	return drafts, nil
 }
 

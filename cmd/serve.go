@@ -7,6 +7,7 @@ import (
 	pb "github.com/1token/email-services/email-apis/generated/go"
 	"github.com/1token/email-services/pkg/config"
 	"github.com/1token/email-services/repository"
+	"github.com/1token/email-services/services"
 	"github.com/1token/email-services/session"
 	grpcmiddleware "github.com/grpc-ecosystem/go-grpc-middleware"
 	grpcrecovery "github.com/grpc-ecosystem/go-grpc-middleware/recovery"
@@ -220,6 +221,9 @@ func serve() error {
 		),
 	}
 
+	s := &services.DraftServerImpl{&db}
+
+	restMux.HandleFunc("/drafts", s.ListDrafts)
 	// restMux.HandleFunc(common.AUTH_SIGNIN_PATH, oidc.SignIn())
 	// restMux.HandleFunc(common.AUTH_SIGNOUT_PATH, oidc.SignOut())
 	// restMux.HandleFunc(common.AUTH_REDIRECT_PATH, oidc.HandleCallback())
