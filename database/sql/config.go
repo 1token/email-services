@@ -10,6 +10,14 @@ import (
 	"github.com/1token/email-services/database"
 )
 
+type conn struct {
+	db *sql.DB
+}
+
+func (c *conn) Close() error {
+	return c.db.Close()
+}
+
 type SQLite3 struct {
 	// File to
 	File string `yaml:"file"`
@@ -23,7 +31,7 @@ func (s *SQLite3) Open() (database.DatabaseX, error) {
 	return conn, nil
 }
 
-func (s *SQLite3) open() (*sql.DB, error) {
+func (s *SQLite3) open() (*conn, error) {
 	db, err := sql.Open("sqlite3", s.File)
 	if err != nil {
 		sqlErr, ok := err.(sqlite3.Error)
@@ -41,7 +49,8 @@ func (s *SQLite3) open() (*sql.DB, error) {
 		return nil, err
 	}
 
-	return db, nil
+	c := &conn{db}
+	return c, nil
 }
 
 type Postgres struct {
@@ -64,7 +73,7 @@ func (p *Postgres) Open() (database.DatabaseX, error) {
 	return conn, nil
 }
 
-func (p *Postgres) open() (*sql.DB, error) {
+func (p *Postgres) open() (*conn, error) {
 	dataSourceName := fmt.Sprintf("postgres://%s:%s@%s:%d/%s?sslmode=disable", p.User, p.Password, p.Host, p.Port, p.Database)
 	db, err := sql.Open("postgres", dataSourceName)
 	if err != nil {
@@ -76,7 +85,8 @@ func (p *Postgres) open() (*sql.DB, error) {
 		return nil, err
 	}
 
-	return db, nil
+	c := &conn{db}
+	return c, nil
 }
 
 type MySQL struct {
@@ -99,7 +109,7 @@ func (s *MySQL) Open() (database.DatabaseX, error) {
 	return conn, nil
 }
 
-func (s *MySQL) open() (*sql.DB, error) {
+func (s *MySQL) open() (*conn, error) {
 	dataSourceName := fmt.Sprintf("%s:%s@tcp(%s:%d)/%s?charset=utf8&tls=false", s.User, s.Password, s.Host, s.Port, s.Database)
 	db, err := sql.Open("mysql", dataSourceName)
 	if err != nil {
@@ -111,5 +121,6 @@ func (s *MySQL) open() (*sql.DB, error) {
 		return nil, err
 	}
 
-	return db, nil
+	c := &conn{db}
+	return c, nil
 }

@@ -3,10 +3,10 @@ package cmd
 import (
 	"context"
 	"fmt"
+	"github.com/1token/email-services/database/sql"
 	pb "github.com/1token/email-services/email-apis/generated/go"
 	"github.com/1token/email-services/pkg/config"
 	"github.com/1token/email-services/repository"
-	impl "github.com/1token/email-services/services"
 	"github.com/1token/email-services/session"
 	grpcmiddleware "github.com/grpc-ecosystem/go-grpc-middleware"
 	grpcrecovery "github.com/grpc-ecosystem/go-grpc-middleware/recovery"
@@ -172,7 +172,7 @@ func serve() error {
 		)
 	}
 
-	pb.RegisterDraftServiceServer(grpcServer, &impl.DraftServerImpl{nil})
+	pb.RegisterDraftServiceServer(grpcServer, &sql.DraftServerImpl{&db})
 	// pb.RegisterAuthServer(grpcServer, &oidc.UserInfoImpl{})
 	// pb.RegisterUsersServer(grpcServer, &impl.UserServerImpl{db})
 	// pb.RegisterJmsApiServer(grpcServer, &impl.JmapServerImpl{db})

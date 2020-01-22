@@ -9,19 +9,19 @@ web:
   tlsCert: certs/foo.org/cert.pem
   tlsKey: certs/foo.org/key.pem
 
-database:
-  type: sqlite3
-  config:
-    file: ./db/email.db
-
 #database:
-#  type: postgres
+#  type: sqlite3
 #  config:
-#    database: email
-#    user: admin
-#    password: admin
-#    host: localhost
-#    port: 5432
+#    file: ./db/email.db
+
+database:
+  type: postgres
+  config:
+    database: email
+    user: admin
+    password: admin
+    host: localhost
+    port: 5432
 
 #database:
 #  type: mysql

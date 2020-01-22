@@ -1,10 +1,11 @@
-package service
+package sql
 
 import (
 	"context"
 	"github.com/golang/protobuf/ptypes/empty"
 	// "github.com/gogo/protobuf/types"
-	"database/sql"
+	// "database/sql"
+	"github.com/1token/email-services/database"
 	// biz "pes/common"
 	pb "github.com/1token/email-services/email-apis/generated/go"
 )
@@ -14,7 +15,30 @@ const (
 )
 
 type DraftServerImpl struct {
-	DB *sql.DB
+	DB *database.DatabaseX
+}
+
+func (c *conn) ListDrafts() ([]database.Draft, error) {
+	/*rows, err := c.Query(`
+		select
+			id, secret, redirect_uris, trusted_peers, public, name, logo_url
+		from client;
+	`)
+	if err != nil {
+		return nil, err
+	}*/
+	var drafts []database.Draft
+	/*for rows.Next() {
+		cli, err := scanClient(rows)
+		if err != nil {
+			return nil, err
+		}
+		clients = append(clients, cli)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}*/
+	return drafts, nil
 }
 
 func (s *DraftServerImpl) GetDraft(ctx context.Context, in *pb.GetDraftRequest) (*pb.Draft, error) {
@@ -24,6 +48,7 @@ func (s *DraftServerImpl) GetDraft(ctx context.Context, in *pb.GetDraftRequest) 
 
 func (s *DraftServerImpl) ListDrafts(ctx context.Context, in *pb.ListDraftsRequest) (*pb.ListDraftsResponse, error) {
 	drafts := &pb.ListDraftsResponse{}
+	// DB.
 	return drafts, nil
 }
 
