@@ -3,6 +3,7 @@ package database
 import (
 	"context"
 	"database/sql"
+	database "github.com/1token/email-services/database/sql/postgres"
 	"github.com/golang/protobuf/ptypes/empty"
 
 	// biz "pes/common"
@@ -24,10 +25,10 @@ func (s *DraftServerImpl) GetDraft(ctx context.Context, in *pb.GetDraftRequest) 
 
 func (s *DraftServerImpl) ListDrafts(ctx context.Context, in *pb.ListDraftsRequest) (*pb.ListDraftsResponse, error) {
 	drafts := &pb.ListDraftsResponse{}
-	/*if err := database.List(s.DB, "draft", &drafts, "order by data->'$.created' desc"); err != nil {
+	if err := database.List(s.DB, "draft", &drafts, "order by data desc"); err != nil {
 		return nil, err
-	}*/
-	draft := &pb.Draft{
+	}
+	/*draft := &pb.Draft{
 		Id:       "abcd",
 		Snipped:  "Hello",
 		Envelope: nil,
@@ -38,7 +39,7 @@ func (s *DraftServerImpl) ListDrafts(ctx context.Context, in *pb.ListDraftsReque
 		Snipped:  "World",
 		Envelope: nil,
 	}
-	drafts.Draft = append(drafts.Draft, draft)
+	drafts.Draft = append(drafts.Draft, draft)*/
 	return drafts, nil
 }
 
