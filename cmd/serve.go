@@ -2,12 +2,14 @@ package cmd
 
 import (
 	"context"
+	"database/sql"
 	"fmt"
-	"github.com/1token/email-services/database/sql"
+	database "github.com/1token/email-services/database/sql"
 	pb "github.com/1token/email-services/email-apis/generated/go"
+	"github.com/1token/email-services/services"
+
 	"github.com/1token/email-services/pkg/config"
 	"github.com/1token/email-services/repository"
-	"github.com/1token/email-services/services"
 	"github.com/1token/email-services/session"
 	grpcmiddleware "github.com/grpc-ecosystem/go-grpc-middleware"
 	grpcrecovery "github.com/grpc-ecosystem/go-grpc-middleware/recovery"
@@ -148,6 +150,8 @@ func serve() error {
 	}
 	log.Infof("config database: %s", c.Database.Type)
 
+	DB, _ := db.(*sql.DB)
+
 	if c.Web.TLSCert != "" {
 		creds, err := credentials.NewServerTLSFromFile(c.Web.TLSCert, c.Web.TLSKey)
 		if err != nil {
@@ -173,7 +177,7 @@ func serve() error {
 		)
 	}
 
-	pb.RegisterDraftServiceServer(grpcServer, &sql.DraftServerImpl{&db})
+	pb.RegisterDraftServiceServer(grpcServer, &database.DraftServerImpl{DB})
 	// pb.RegisterAuthServer(grpcServer, &oidc.UserInfoImpl{})
 	// pb.RegisterUsersServer(grpcServer, &impl.UserServerImpl{db})
 	// pb.RegisterJmsApiServer(grpcServer, &impl.JmapServerImpl{db})
@@ -221,7 +225,7 @@ func serve() error {
 		),
 	}
 
-	s := &services.DraftServerImpl{&db}
+	s := &services.DraftServerImpl{DB}
 
 	restMux.HandleFunc("/drafts", s.ListDrafts)
 	// restMux.HandleFunc(common.AUTH_SIGNIN_PATH, oidc.SignIn())

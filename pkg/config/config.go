@@ -1,9 +1,9 @@
 package config
 
 import (
+	// "database/sql"
 	"fmt"
 	"github.com/1token/email-services/database"
-	"github.com/1token/email-services/database/sql"
 	"strings"
 )
 
@@ -67,13 +67,13 @@ type Database struct {
 }
 
 type DatabaseConfig interface {
-	Open() (database.DatabaseX, error)
+	Open() (database.Database, error)
 }
 
 var databases = map[string]func() DatabaseConfig{
-	"sqlite3":  func() DatabaseConfig { return &sql.SQLite3{} },
-	"postgres": func() DatabaseConfig { return &sql.Postgres{} },
-	"mysql":    func() DatabaseConfig { return &sql.MySQL{} },
+	"sqlite3":  func() DatabaseConfig { return &database.SQLite3{} },
+	"postgres": func() DatabaseConfig { return &database.Postgres{} },
+	"mysql":    func() DatabaseConfig { return &database.MySQL{} },
 }
 
 func (s *Database) UnmarshalYAML(unmarshal func(interface{}) error) error {
@@ -90,7 +90,7 @@ func (s *Database) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	switch s.Type {
 	case "sqlite3":
 		var dbConfig struct {
-			Config sql.SQLite3 `yaml:"config"`
+			Config database.SQLite3 `yaml:"config"`
 		}
 
 		if err := unmarshal(&dbConfig); err != nil {
@@ -99,7 +99,7 @@ func (s *Database) UnmarshalYAML(unmarshal func(interface{}) error) error {
 		s.Config = &dbConfig.Config
 	case "postgres":
 		var dbConfig struct {
-			Config sql.Postgres `yaml:"config"`
+			Config database.Postgres `yaml:"config"`
 		}
 
 		if err := unmarshal(&dbConfig); err != nil {
@@ -108,7 +108,7 @@ func (s *Database) UnmarshalYAML(unmarshal func(interface{}) error) error {
 		s.Config = &dbConfig.Config
 	case "mysql":
 		var dbConfig struct {
-			Config sql.MySQL `yaml:"config"`
+			Config database.MySQL `yaml:"config"`
 		}
 
 		if err := unmarshal(&dbConfig); err != nil {

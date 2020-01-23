@@ -1,4 +1,4 @@
-package sql
+package database
 
 import (
 	"database/sql"
@@ -6,16 +6,11 @@ import (
 	mysql "github.com/go-sql-driver/mysql"
 	postgres "github.com/lib/pq"
 	sqlite3 "github.com/mattn/go-sqlite3"
-
-	"github.com/1token/email-services/database"
 )
 
-type conn struct {
-	db *sql.DB
-}
-
-func (c *conn) Close() error {
-	return c.db.Close()
+type Database interface {
+	Close() error
+	// ListDrafts() ([]Draft, error)
 }
 
 type SQLite3 struct {
@@ -23,15 +18,15 @@ type SQLite3 struct {
 	File string `yaml:"file"`
 }
 
-func (s *SQLite3) Open() (database.DatabaseX, error) {
-	conn, err := s.open()
+func (s *SQLite3) Open() (Database, error) {
+	db, err := s.open()
 	if err != nil {
 		return nil, err
 	}
-	return conn, nil
+	return db, nil
 }
 
-func (s *SQLite3) open() (*conn, error) {
+func (s *SQLite3) open() (*sql.DB, error) {
 	db, err := sql.Open("sqlite3", s.File)
 	if err != nil {
 		sqlErr, ok := err.(sqlite3.Error)
@@ -49,8 +44,7 @@ func (s *SQLite3) open() (*conn, error) {
 		return nil, err
 	}
 
-	c := &conn{db}
-	return c, nil
+	return db, nil
 }
 
 type Postgres struct {
@@ -61,8 +55,8 @@ type Postgres struct {
 	Port     uint16
 }
 
-func (p *Postgres) Open() (database.DatabaseX, error) {
-	conn, err := p.open()
+func (p *Postgres) Open() (Database, error) {
+	db, err := p.open()
 	if err != nil {
 		sqlErr, ok := err.(postgres.Error)
 		if !ok {
@@ -70,10 +64,10 @@ func (p *Postgres) Open() (database.DatabaseX, error) {
 		}
 		return nil, sqlErr
 	}
-	return conn, nil
+	return db, nil
 }
 
-func (p *Postgres) open() (*conn, error) {
+func (p *Postgres) open() (*sql.DB, error) {
 	dataSourceName := fmt.Sprintf("postgres://%s:%s@%s:%d/%s?sslmode=disable", p.User, p.Password, p.Host, p.Port, p.Database)
 	db, err := sql.Open("postgres", dataSourceName)
 	if err != nil {
@@ -85,8 +79,7 @@ func (p *Postgres) open() (*conn, error) {
 		return nil, err
 	}
 
-	c := &conn{db}
-	return c, nil
+	return db, nil
 }
 
 type MySQL struct {
@@ -97,8 +90,8 @@ type MySQL struct {
 	Port     uint16
 }
 
-func (s *MySQL) Open() (database.DatabaseX, error) {
-	conn, err := s.open()
+func (s *MySQL) Open() (Database, error) {
+	db, err := s.open()
 	if err != nil {
 		sqlErr, ok := err.(*mysql.MySQLError)
 		if !ok {
@@ -106,10 +99,10 @@ func (s *MySQL) Open() (database.DatabaseX, error) {
 		}
 		return nil, sqlErr
 	}
-	return conn, nil
+	return db, nil
 }
 
-func (s *MySQL) open() (*conn, error) {
+func (s *MySQL) open() (*sql.DB, error) {
 	dataSourceName := fmt.Sprintf("%s:%s@tcp(%s:%d)/%s?charset=utf8&tls=false", s.User, s.Password, s.Host, s.Port, s.Database)
 	db, err := sql.Open("mysql", dataSourceName)
 	if err != nil {
@@ -121,6 +114,5 @@ func (s *MySQL) open() (*conn, error) {
 		return nil, err
 	}
 
-	c := &conn{db}
-	return c, nil
+	return db, nil
 }
