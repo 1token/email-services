@@ -32,7 +32,7 @@ func List(db *sql.DB, table string, result interface{}, clause ...string) error 
 	}*/
 	slicev := resultv.Elem()
 	elemt := slicev.Type().Elem()
-	query := "SELECT data FROM " + table
+	query := "SELECT id, subject, body_uri, mimetype FROM " + table
 
 	if len(clause) > 0 {
 		for _, v := range clause {

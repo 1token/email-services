@@ -11,21 +11,21 @@ import (
 )
 
 const (
-	draftTable = "draft"
+	messageTable = "message"
 )
 
-type DraftServerImpl struct {
+type MessageServerImpl struct {
 	DB *sql.DB
 }
 
-func (s *DraftServerImpl) GetDraft(ctx context.Context, in *pb.GetDraftRequest) (*pb.Draft, error) {
-	draft := &pb.Draft{}
-	return draft, nil
+func (s *MessageServerImpl) GetMessage(ctx context.Context, in *pb.GetMessageRequest) (*pb.Message, error) {
+	message := &pb.Message{}
+	return message, nil
 }
 
-func (s *DraftServerImpl) ListDrafts(ctx context.Context, in *pb.ListDraftsRequest) (*pb.ListDraftsResponse, error) {
-	drafts := &pb.ListDraftsResponse{}
-	if err := database.List(s.DB, "email.message", &drafts, "order by created_at desc"); err != nil {
+func (s *MessageServerImpl) ListMessages(ctx context.Context, in *pb.ListMessagesRequest) (*pb.ListMessagesResponse, error) {
+	messages := &pb.ListMessagesResponse{}
+	if err := database.List(s.DB, "email.message", &messages, "order by created_at desc"); err != nil {
 		return nil, err
 	}
 	/*draft := &pb.Draft{
@@ -40,10 +40,10 @@ func (s *DraftServerImpl) ListDrafts(ctx context.Context, in *pb.ListDraftsReque
 		Envelope: nil,
 	}
 	drafts.Draft = append(drafts.Draft, draft)*/
-	return drafts, nil
+	return messages, nil
 }
 
-func (s *DraftServerImpl) CreateDraft(ctx context.Context, in *pb.CreateDraftRequest) (*pb.Draft, error) {
+func (s *MessageServerImpl) CreateDraft(ctx context.Context, in *pb.CreateDraftRequest) (*pb.Draft, error) {
 	draft := &pb.Draft{}
 
 	/*insertCommentQuery := `INSERT INTO comments(ticket_id, owner, content, metadata, created_at, updated_at) VALUES ($1, $2, $3, $4, now(), now())`
@@ -68,16 +68,16 @@ func (s *DraftServerImpl) CreateDraft(ctx context.Context, in *pb.CreateDraftReq
 	return draft, nil
 }
 
-func (s *DraftServerImpl) UpdateDraft(ctx context.Context, in *pb.UpdateDraftRequest) (*pb.Draft, error) {
+func (s *MessageServerImpl) UpdateDraft(ctx context.Context, in *pb.UpdateDraftRequest) (*pb.Draft, error) {
 	draft := &pb.Draft{}
 	return draft, nil
 }
 
-func (s *DraftServerImpl) DeleteDraft(ctx context.Context, in *pb.DeleteDraftRequest) (*empty.Empty, error) {
+func (s *MessageServerImpl) DeleteDraft(ctx context.Context, in *pb.DeleteDraftRequest) (*empty.Empty, error) {
 	return nil, nil
 }
 
-func (s *DraftServerImpl) SendDraft(ctx context.Context, in *pb.SendDraftRequest) (*pb.Email, error) {
+func (s *MessageServerImpl) SendDraft(ctx context.Context, in *pb.SendDraftRequest) (*pb.Email, error) {
 	email := &pb.Email{}
 	return email, nil
 }

@@ -178,6 +178,7 @@ func serve() error {
 	}
 
 	pb.RegisterDraftServiceServer(grpcServer, &database.DraftServerImpl{DB})
+	pb.RegisterDraftServiceServer(grpcServer, &database.MessageServerImpl{DB})
 	// pb.RegisterAuthServer(grpcServer, &oidc.UserInfoImpl{})
 	// pb.RegisterUsersServer(grpcServer, &impl.UserServerImpl{db})
 	// pb.RegisterJmsApiServer(grpcServer, &impl.JmapServerImpl{db})
