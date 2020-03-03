@@ -3,7 +3,6 @@ package database
 import (
 	"context"
 	"database/sql"
-	database "github.com/1token/email-services/database/sql/postgres"
 	"github.com/golang/protobuf/ptypes/empty"
 
 	// biz "pes/common"
@@ -18,7 +17,7 @@ type MessageServerImpl struct {
 	DB *sql.DB
 }
 
-func (s *MessageServerImpl) GetMessage(ctx context.Context, in *pb.GetMessageRequest) (*pb.Message, error) {
+/*func (s *MessageServerImpl) GetMessage(ctx context.Context, in *pb.GetMessageRequest) (*pb.Message, error) {
 	message := &pb.Message{}
 	return message, nil
 }
@@ -28,20 +27,20 @@ func (s *MessageServerImpl) ListMessages(ctx context.Context, in *pb.ListMessage
 	if err := database.List(s.DB, "email.message", &messages, "order by created_at desc"); err != nil {
 		return nil, err
 	}
-	/*draft := &pb.Draft{
-		Id:       "abcd",
-		Snipped:  "Hello",
-		Envelope: nil,
-	}
-	drafts.Draft = append(drafts.Draft, draft)
-	draft = &pb.Draft{
-		Id:       "efgh",
-		Snipped:  "World",
-		Envelope: nil,
-	}
-	drafts.Draft = append(drafts.Draft, draft)*/
+	//draft := &pb.Draft{
+	//	Id:       "abcd",
+	//	Snipped:  "Hello",
+	//	Envelope: nil,
+	//}
+	//drafts.Draft = append(drafts.Draft, draft)
+	//draft = &pb.Draft{
+	//	Id:       "efgh",
+	//	Snipped:  "World",
+	//	Envelope: nil,
+	//}
+	//drafts.Draft = append(drafts.Draft, draft)
 	return messages, nil
-}
+}*/
 
 func (s *MessageServerImpl) CreateDraft(ctx context.Context, in *pb.CreateDraftRequest) (*pb.Draft, error) {
 	draft := &pb.Draft{}
